@@ -5,22 +5,20 @@ namespace App\Http\Controllers\api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PostResource;
 use App\Models\Post;
+use App\Http\Controllers\api\responses\apiResponse;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class PostsController extends Controller
 {
+    use apiResponse;
 
     public function index()
     {
         $posts = Post::all();
-        $arr = [
-            'posts' => PostResource::collection($posts),
-            'message' => 'success',
-            'status' => 200
-        ];
-        return response($arr);
+        
+        return $this->apiResponse($posts, 'success', 200);
     }
 
     public function show($id)
@@ -28,20 +26,12 @@ class PostsController extends Controller
         $post = Post::find($id);
 
         if($post){
-            $arr = [
-                'post' => new PostResource($post),
-                'message' => 'success',
-                'status' => 200
-            ];
+            return $this->apiResponse(new PostResource($post), 'success', 200);
         }
-        else{
-            $arr = [
-                'message' => 'post not found',
-                'status' => 404
-            ];
-        }
+        
+        return $this->apiResponse(null, 'post not found', 404);
+        
 
-        return response($arr);
     }
 
     public function store(Request $request)
@@ -50,25 +40,18 @@ class PostsController extends Controller
             'title' => 'required',
             'body' => 'required'
         ]);
+
         if($validator->fails()){
-            $arr = [
-                'message' => $validator->errors(),
-                'status' => 400
-            ];
-            return response($arr);
+            return $this->apiResponse(null, $validator->errors(), 400);
         }
 
 
         $post = Post::create($request->all());
+
         if($post){
-            $arr = [
-                'post' => new PostResource($post),
-                'message' => 'success',
-                'status' => 201
-            ];
+            return $this->apiResponse(new PostResource($post), 'success', 200);
         }
         
-        return response($arr);
     }
 
     public function update(Request $request, $id)
@@ -77,32 +60,35 @@ class PostsController extends Controller
             'title' => 'required',
             'body' => 'required'
         ]);
+
         if($validator->fails()){
-            $arr = [
-                'message' => $validator->errors(),
-                'status' => 400
-            ];
-            return response($arr);
+            return $this->apiResponse(null, $validator->errors(), 400);
         }
         
         $post = Post::find($id);
-        $post1 = $post->update($request->all());
 
+        if (!$post) {
+            return $this->apiResponse(null, 'post not found', 404);
+        }
+
+        $post->update($request->all());
         
-        if($post){
-            $arr = [
-                'post' => new PostResource($post),
-                'message' => 'success',
-                'status' => 200
-            ];
-        }
-        else{
-            $arr = [
-                'message' => 'post not found',
-                'status' => 404
-            ];
+        
+        return $this->apiResponse(new PostResource($post), 'Updated successfully', 201);
+        
+    }
+
+    public function destroy($id)
+    {
+        $post = Post::find($id);
+
+        if (!$post) {
+            return $this->apiResponse(null, 'post not found', 404);
         }
 
-        return response($arr);
+        $post->delete();
+
+        return $this->apiResponse(null, 'Deleted successfully', 200);
     }
+
 }
